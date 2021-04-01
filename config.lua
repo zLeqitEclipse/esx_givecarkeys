@@ -1,3 +1,3 @@
 Config = {
-    Locale = "de"
+    Locale = "en"
 }

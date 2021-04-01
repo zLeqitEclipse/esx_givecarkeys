@@ -9,7 +9,22 @@ ESX.RegisterCommand('givecarkeys', 'user', function(xPlayer)
 	end, false,	{help = "Give someone else your carkeys"
 })
 
-ESX.RegisterServerCallback('esx_givecarkeys:checkOwnStatus', function(source, cb, plate)
+ESX.RegisterCommand('owncar', 'admin', function(xPlayer)
+
+	xPlayer.triggerEvent("esx_givecarkeys:ownvehicle")
+
+	end, false,	{help = "Set the next Vehicle to yours"
+})
+
+ESX.RegisterCommand('unowncar', 'admin', function(xPlayer)
+
+	xPlayer.triggerEvent("esx_givecarkeys:unownvehicle")
+
+	end, false,	{help = "Remove any owner of the car next to you"
+})
+
+
+ESX.RegisterServerCallback('esx_givecarkeys:checkOwnership', function(source, cb, plate)
 	local xPlayer = ESX.GetPlayerFromId(source)
 
 	MySQL.Async.fetchAll(
@@ -42,19 +57,54 @@ ESX.RegisterServerCallback('esx_givecarkeys:checkOwnStatus', function(source, cb
 	)
 end)
 
+ESX.RegisterServerCallback('esx_givecarkeys:checkOwnerStatus', function(source, cb, plate)
+	MySQL.Async.fetchAll(
+		'SELECT owner FROM owned_vehicles WHERE plate = @plate',
+		{
+			['@plate'] = plate
+		},
+		function(result)
+
+			local found = false
+			local ownerName = nil
+
+			if result[1] ~= nil then
+				local xPlayer = ESX.GetPlayerFromIdentifier(result[1].owner)
+				ownerName = xPlayer.getName()
+				found = true
+			end
+
+			if found then
+				cb(true, ownerName)
+			else
+				cb(false, ownerName)
+			end
+
+		end
+	)
+end)
+
 RegisterServerEvent('setExistingOwner')
-AddEventHandler('setExistingOwner', function(playerId, vehicleProps)
-    print('debug')
-	local xPlayer = ESX.GetPlayerFromId(playerId)
+AddEventHandler('setExistingOwner', function(playerId, vehiclePlate, msg)
+	local _source = source
+	local xPlayer = nil
+
+	if playerId ~= nil then
+		xPlayer = ESX.GetPlayerFromId(playerId)
+	else
+		xPlayer = ESX.GetPlayerFromId(_source)
+	end
 
 	MySQL.Async.execute('UPDATE owned_vehicles SET owner=@owner WHERE plate=@plate',
 	{
 		['@owner']   = xPlayer.identifier,
-		['@plate']   = vehicleProps.plate
+		['@plate']   = vehiclePlate
 	},
 
 	function (rowsChanged)
-		TriggerClientEvent('esx:showNotification', playerId, _U('handover2', vehicleProps.plate), vehicleProps.plate)
+		if msg then
+			TriggerClientEvent("pNotify:SendNotification", _source, {text = _U('handover2', vehicleProps.plate), type = "success", timeout = 2000})
+		end
 
 	end)
 end)
@@ -67,4 +117,36 @@ function trim(s)
     end
 end
 
+RegisterServerEvent('setOwner')
+AddEventHandler('setOwner', function(playerPed, vehicleProps)
+	local _source = source
+	local xPlayer = ESX.GetPlayerFromId(_source)
 
+	MySQL.Async.execute('INSERT INTO owned_vehicles (owner, state, plate) VALUES (@owner, 0, @plate)',
+	{
+		['@owner']   = xPlayer.identifier,
+		['@plate']   = vehicleProps.plate
+	},
+
+	function (rowsChanged)
+		TriggerClientEvent("pNotify:SendNotification", _source, {text = _U('nowyourcar'), type = "success", timeout = 2000})
+	end)
+end)
+
+function trim(s)
+    if s ~= nil then
+		return s:match("^%s*(.-)%s*$")
+	else
+		return nil
+    end
+end
+
+
+RegisterServerEvent('removeExistingOwner')
+AddEventHandler('removeExistingOwner', function(vehiclePlate)
+	MySQL.Async.execute('DELETE FROM owned_vehicles WHERE plate=@plate',
+	{
+		['@plate']   = vehiclePlate
+	}
+	)
+end)
