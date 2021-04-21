@@ -9,6 +9,7 @@ A remake of [ESX_GiveCarKeys](https://github.com/c0deina/ESX_GiveCarKeys), with 
 
 # REQUIREMENTS
 * [es_extended](https://github.com/esx-framework/es_extended)
+* [esx_drp_garage](https://github.com/OhTanoshi/esx_drp_garage)
 * [pNotify](https://github.com/Nick78111/pNotify)
 
 # DOWNLOAD & INSTALLTION
