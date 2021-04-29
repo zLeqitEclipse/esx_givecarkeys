@@ -121,11 +121,14 @@ RegisterServerEvent('setOwner')
 AddEventHandler('setOwner', function(playerPed, vehicleProps)
 	local _source = source
 	local xPlayer = ESX.GetPlayerFromId(_source)
+	local vehprop = json.encode(vehicleProps)
+	local plate = vehicleProps.plate
 
-	MySQL.Async.execute('INSERT INTO owned_vehicles (owner, plate) VALUES (@owner, @plate)',
+	MySQL.Async.execute('INSERT INTO owned_vehicles (owner, plate, vehicle) VALUES (@owner, @plate, @vehicle)',
 	{
 		['@owner']   = xPlayer.identifier,
-		['@plate']   = vehicleProps.plate
+		['@plate']   = plate,
+		['@vehicle'] = vehprop
 	},
 
 	function (rowsChanged)
